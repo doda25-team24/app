@@ -1,5 +1,5 @@
 # --- STAGE 1: Build with Maven + Java 25 ---
-FROM maven:3.9.11-eclipse-temurin-25-alpine AS builder
+FROM maven:3.9.11-eclipse-temurin-25-alpine AS build
 
 WORKDIR /app
 
@@ -15,10 +15,14 @@ FROM eclipse-temurin:25-jre-jammy
 
 WORKDIR /app
 
-COPY --from=builder /app/target/*.jar /app/app.jar
+COPY --from=build /app/target/*.jar /app/app.jar
 
 ENV MODEL_HOST="http://model-service:8081"
 
+# env variable for app port (default 8080)
+ENV APP_PORT=8080
+
+# expose application port (just documentation)
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
