@@ -2,7 +2,8 @@ package frontend.ctrl;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
+import frontend.metrics.MetricsConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
 
 import frontend.data.Sms;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +26,9 @@ public class FrontendController {
     private String modelHost;
 
     private RestTemplateBuilder rest;
+    @Autowired
+    private MetricsConfig metrics;
+
 
     public FrontendController(RestTemplateBuilder rest, Environment env) {
         this.rest = rest;
@@ -60,10 +66,25 @@ public class FrontendController {
     @PostMapping({ "", "/" })
     @ResponseBody
     public Sms predict(@RequestBody Sms sms) {
-        System.out.printf("Requesting prediction for \"%s\" ...\n", sms.sms);
-        sms.result = getPrediction(sms);
-        System.out.printf("Prediction: %s\n", sms.result);
-        return sms;
+        metrics.requestStarted();
+        long start = System.currentTimeMillis();
+
+        try {
+            System.out.printf("Requesting prediction for \"%s\" ...\n", sms.sms);
+            sms.result = getPrediction(sms);
+            System.out.printf("Prediction: %s\n", sms.result);
+
+            if ("spam".equalsIgnoreCase(sms.result)) {
+                metrics.incrementSpamCounter();
+            }
+
+            long duration = System.currentTimeMillis() - start;
+            metrics.recordPredictionLatency(duration);
+
+            return sms;
+        } finally {
+            metrics.requestEnded();
+        }
     }
 
     private String getPrediction(Sms sms) {
