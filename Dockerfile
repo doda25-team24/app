@@ -6,6 +6,13 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
+ARG GITHUB_ACTOR
+ARG GITHUB_TOKEN
+
+# Create a settings.xml file on the fly with your credentials
+RUN mkdir -p /root/.m2 && \
+    echo "<settings><servers><server><id>github</id><username>${GITHUB_ACTOR}</username><password>${GITHUB_TOKEN}</password></server></servers></settings>" > /root/.m2/settings.xml
+
 # build the Spring Boot application JAR
 RUN mvn clean package -DskipTests
 
